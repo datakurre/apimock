@@ -21,7 +21,9 @@ common shared-properties
         scientific,
         random,
         insert-ordered-containers,
-        vector
+        vector,
+        scotty,
+        http-types
 
 library
     import:           shared-properties
