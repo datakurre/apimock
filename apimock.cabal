@@ -1,0 +1,34 @@
+cabal-version:      3.0
+name:               apimock
+version:            0.1.0.0
+-- synopsis:
+-- description:
+-- homepage:
+-- bug-reports:
+license:            Apache-2.0
+license-file:       LICENSE
+author:             Your Name
+maintainer:         your-email@example.com
+-- copyright:
+-- category:
+extra-source-files: CHANGELOG.md
+
+common warnings
+    ghc-options: -Wall
+
+executable apimock
+    import:           warnings
+    main-is:          Main.hs
+    other-modules:
+    -- other-extensions:
+    build-depends:
+        base ^>=4.20.0.0,
+        aeson,
+        openapi3,
+        bytestring,
+        fakedata,
+        containers,
+        text,
+        scientific
+    hs-source-dirs:   src
+    default-language: GHC2021

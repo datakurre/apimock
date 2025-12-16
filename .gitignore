@@ -1,0 +1,35 @@
+# Nix
+result
+result-*
+.nix-helpers
+
+# Haskell
+.cabal-bin
+.cabal-work
+.stack-work
+dist
+dist-newstyle
+*.hi
+*.o
+*.dyn_hi
+*.dyn_o
+*.hp
+*.eventlog
+*.tix
+*.prof
+TAGS
+.hie
+.hie-boot
+hie.yaml
+hie.yaml.bak
+.ghc.environment.*
+
+# IDE specific
+.vscode/
+.idea/
+*.swp
+*~
+.#*
+
+# Agents
+TODO*
