@@ -1,26 +1,15 @@
 cabal-version:      3.0
 name:               apimock
 version:            0.1.0.0
--- synopsis:
--- description:
--- homepage:
--- bug-reports:
 license:            Apache-2.0
 license-file:       LICENSE
 author:             Your Name
 maintainer:         your-email@example.com
--- copyright:
--- category:
 extra-source-files: CHANGELOG.md
 
-common warnings
+common shared-properties
     ghc-options: -Wall
-
-executable apimock
-    import:           warnings
-    main-is:          Main.hs
-    other-modules:    Fakedata
-    -- other-extensions:
+    default-language: GHC2021
     build-depends:
         base ^>=4.20.0.0,
         aeson,
@@ -33,5 +22,21 @@ executable apimock
         random,
         insert-ordered-containers,
         vector
+
+library
+    import:           shared-properties
+    exposed-modules:  Lib, Fakedata
     hs-source-dirs:   src
-    default-language: GHC2021
+
+executable apimock
+    import:           shared-properties
+    main-is:          Main.hs
+    hs-source-dirs:   app
+    build-depends:    apimock
+
+test-suite apimock-test
+    import:           shared-properties
+    type:             exitcode-stdio-1.0
+    hs-source-dirs:   test
+    main-is:          Spec.hs
+    build-depends:    apimock, hspec, hspec-wai

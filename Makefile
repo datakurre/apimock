@@ -1,3 +1,5 @@
+.PHONY: shell build watch serve test
+
 shell:
 	nix develop
 
@@ -9,3 +11,6 @@ watch:
 
 serve: build
 	./result/bin/apimock
+
+test:
+	nix develop --command cabal test

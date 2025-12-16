@@ -31,6 +31,7 @@
             haskellPackages.implicit-hie
             haskellPackages.cabal-fmt
             stack
+            zlib
           ];
         };
       });
