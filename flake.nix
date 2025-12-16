@@ -13,8 +13,14 @@
       });
     in
     {
+      packages = forEachSupportedSystem ({ pkgs }: {
+        apimock = pkgs.haskellPackages.callCabal2nix "apimock" ./. {};
+        default = self.packages.${pkgs.system}.apimock;
+      });
+
       devShells = forEachSupportedSystem ({ pkgs }: {
         default = pkgs.mkShell {
+          inputsFrom = [ self.packages.${pkgs.system}.default ];
           packages = with pkgs; [
             (haskellPackages.ghcWithPackages (ps: with ps; [ ]))
             cabal-install

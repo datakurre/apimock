@@ -19,7 +19,7 @@ common warnings
 executable apimock
     import:           warnings
     main-is:          Main.hs
-    other-modules:
+    other-modules:    Fakedata
     -- other-extensions:
     build-depends:
         base ^>=4.20.0.0,
@@ -29,6 +29,9 @@ executable apimock
         fakedata,
         containers,
         text,
-        scientific
+        scientific,
+        random,
+        insert-ordered-containers,
+        vector
     hs-source-dirs:   src
     default-language: GHC2021
