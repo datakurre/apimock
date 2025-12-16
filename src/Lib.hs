@@ -4,6 +4,7 @@ module Lib
     , generateMockValue
     , FGen
     , generate
+    , matchPath
     ) where
 
 import Data.Aeson (Value(..), object, eitherDecodeFileStrict)
@@ -13,6 +14,11 @@ import System.IO (hPutStrLn, stderr)
 import System.Exit (exitFailure)
 import qualified Data.HashMap.Strict.InsOrd as InsOrdHashMap
 import qualified Data.Vector as V
+import Data.Text (Text) -- Required for the 'Text' type
+import qualified Data.Text as T
+import qualified Data.Map as Map
+import Data.Function ((&))
+import Data.Maybe (listToMaybe, mapMaybe)
 import Fakedata (fakeText, fakeInt, fakeValue, FGen, generate)
 import Data.Scientific (fromFloatDigits)
 
@@ -53,3 +59,38 @@ generateMockValue schema =
           Array . V.fromList <$> sequence (replicate numItems (generateMockValue itemSchema))
         _ -> return (Array V.empty) -- Default to empty array if item schema is not specified
     _ -> return Null -- Default to Null for unsupported types or Nothing
+
+-- | Matches an incoming request path to an OpenAPI path template and extracts parameters.
+matchPath :: OpenApi -> Text -> Maybe (Text, Map.Map Text Text)
+matchPath spec requestPath =
+  let
+    -- Split the request path into segments
+    requestSegments = T.splitOn "/" requestPath
+
+    -- Iterate through all paths defined in the OpenAPI spec
+    -- and try to find a match
+    matchingPaths =
+      InsOrdHashMap.toList (_openApiPaths spec)
+      & mapMaybe (\(pathTemplate, _) ->
+          let
+            templateSegments = T.splitOn "/" (T.pack pathTemplate)
+          in
+            if length requestSegments == length templateSegments
+            then
+              let
+                -- Try to match segments and extract parameters
+                (isMatch, params) = foldl' (\(accMatch, accParams) (reqSeg, tempSeg) ->
+                                              if T.isPrefixOf "{" tempSeg && T.isSuffixOf "}" tempSeg
+                                              then -- This is a parameter segment
+                                                let paramName = T.drop 1 (T.dropEnd 1 tempSeg)
+                                                in (accMatch, Map.insert paramName reqSeg accParams)
+                                              else -- This is a static segment
+                                                (accMatch && (reqSeg == tempSeg), accParams)
+                                          ) (True, Map.empty) (zip requestSegments templateSegments)
+              in
+                if isMatch then Just (T.pack pathTemplate, params) else Nothing
+            else Nothing
+        )
+  in
+    -- Return the first matching path and its parameters, if any
+    listToMaybe matchingPaths
