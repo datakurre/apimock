@@ -1,7 +1,7 @@
-.PHONY: shell build watch serve test coverage
+.PHONY: shell build watch serve test
 
-coverage:
-	nix develop --command cabal test apimock-test --test-show-details=always --enable-coverage
+shell:
+	nix develop
 	$(eval TIX_FILE := $(shell find dist-newstyle -name "*.tix" | head -n 1))
 	nix develop --command hpc report $(TIX_FILE) --hpcdir=dist-newstyle --srcdir=src --srcdir=app --srcdir=test
 	nix develop --command hpc markup $(TIX_FILE) --hpcdir=dist-newstyle --srcdir=src --srcdir=app --srcdir=test --destdir=hpc_html_report

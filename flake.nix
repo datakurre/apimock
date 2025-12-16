@@ -13,21 +13,13 @@
       });
     in
     {
-                        packages = forEachSupportedSystem ({ pkgs }: {
-                          apimock = pkgs.haskellPackages.callCabal2nix "apimock" ./. {};
-                          default = self.packages.${pkgs.system}.apimock;
-                        });            
-                  checks = forEachSupportedSystem ({ pkgs }:
-                    let
-                      apimockPkg = pkgs.haskellPackages.apimock;
-                    in
-                    {
-                      apimock-test = apimockPkg.tests.apimock-test;
-                      apimock-test-coverage = apimockPkg.tests.apimock-test.overrideAttrs (old: {
-                        doCoverage = true;
-                      });
-                    }
-                  );
+      packages = forEachSupportedSystem ({ pkgs }: {
+        apimock = (pkgs.haskellPackages.callCabal2nix "apimock" ./. {}).overrideAttrs (old: {
+          doCheck = true;
+        });
+        default = self.packages.${pkgs.system}.apimock;
+      });
+
       devShells = forEachSupportedSystem ({ pkgs }: {
         default = pkgs.mkShell {
           inputsFrom = [ self.packages.${pkgs.system}.default ];
@@ -42,7 +34,6 @@
             haskellPackages.cabal-fmt
             stack
             zlib
-            jq
           ];
         };
       });
