@@ -33,3 +33,5 @@ hie.yaml.bak
 
 # Agents
 TODO*
+run_apimock.sh
+server.log

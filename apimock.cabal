@@ -23,7 +23,8 @@ common shared-properties
         insert-ordered-containers,
         vector,
         scotty,
-        http-types
+        http-types,
+        wai
 
 library
     import:           shared-properties
@@ -39,6 +40,7 @@ executable apimock
 test-suite apimock-test
     import:           shared-properties
     type:             exitcode-stdio-1.0
-    hs-source-dirs:   test
+    hs-source-dirs:   test, app
     main-is:          Spec.hs
-    build-depends:    apimock, hspec, hspec-wai
+    other-modules:    Server
+    build-depends:    apimock, hspec, hspec-wai, hspec-wai-json
