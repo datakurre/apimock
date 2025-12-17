@@ -1,5 +1,5 @@
 {
-  description = "A very basic flake for a Haskell project";
+  description = "API mock server based on OpenAPI specifications";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
@@ -17,14 +17,13 @@
         apimock = (pkgs.haskellPackages.callCabal2nix "apimock" ./. {}).overrideAttrs (old: {
           doCheck = true;
         });
-        default = self.packages.${pkgs.system}.apimock;
+        default = self.packages.${pkgs.stdenv.hostPlatform.system}.apimock;
       });
 
       devShells = forEachSupportedSystem ({ pkgs }: {
         default = pkgs.mkShell {
-          inputsFrom = [ self.packages.${pkgs.system}.default ];
+          inputsFrom = [ self.packages.${pkgs.stdenv.hostPlatform.system}.default ];
           packages = with pkgs; [
-            (haskellPackages.ghcWithPackages (ps: with ps; [ ]))
             cabal-install
             haskell-language-server
             fourmolu
@@ -32,7 +31,6 @@
             ghcid
             haskellPackages.implicit-hie
             haskellPackages.cabal-fmt
-            stack
             zlib
           ];
         };
