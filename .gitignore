@@ -6,7 +6,6 @@ result-*
 # Haskell
 .cabal-bin
 .cabal-work
-.stack-work
 dist
 dist-newstyle
 *.hi

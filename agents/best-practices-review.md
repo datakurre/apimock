@@ -24,16 +24,6 @@ nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.05";
 ```
 
 #### 2. Deprecated 'system' Usage (Low Priority)
-**Issue**: Warnings about 'system' being renamed to 'stdenv.hostPlatform.system'
-**Current**: `self.packages.${pkgs.system}.apimock`
-**Recommendation**: While this works, consider updating to avoid deprecation warnings in future Nix versions
-
-#### 3. Redundant Stack in devShell (Low Priority)
-**Issue**: Both Cabal and Stack are included but project uses Cabal
-**Current**: Both `cabal-install` and `stack` in devShell
-**Recommendation**: Remove `stack` since project uses Cabal exclusively
-
-## Haskell Best Practices
 
 ### ✅ Good Practices Currently Implemented
 
@@ -113,8 +103,7 @@ category:     Web, Testing
 3. Consider pinning nixpkgs to stable release
 
 ### Low Priority
-4. Remove Stack from devShell
-5. Create or remove CHANGELOG.md reference
-6. Move Server to library module
-7. Add synopsis/description to cabal file
-8. Run cabal-fmt on cabal file
+4. Create or remove CHANGELOG.md reference
+5. Move Server to library module
+6. Add synopsis/description to cabal file
+7. Run cabal-fmt on cabal file
