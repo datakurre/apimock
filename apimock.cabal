@@ -43,4 +43,4 @@ test-suite apimock-test
     hs-source-dirs:   test, app
     main-is:          Spec.hs
     other-modules:    Server
-    build-depends:    apimock, hspec, hspec-wai, hspec-wai-json
+    build-depends:    apimock, hspec, hspec-wai, hspec-wai-json, wai-extra

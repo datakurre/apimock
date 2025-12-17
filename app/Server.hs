@@ -2,7 +2,7 @@
 module Server where
 
 import Lib (parseOpenApiSpec, generateMockValue, generate, matchPath)
-import Data.Aeson (encode)
+import Data.Aeson (encode, object)
 import Data.OpenApi (OpenApi(..), PathItem(..), Operation(..), Responses(..), Response(..), MediaTypeObject(..), Referenced(Inline), Schema(..), OpenApiType(OpenApiString))
 import qualified Data.HashMap.Strict.InsOrd as InsOrdHashMap
 import Data.Monoid (mempty)
@@ -24,9 +24,33 @@ apiMockApp openApi = do
           Just pathItem -> do
             case _pathItemGet pathItem of
               Just operation -> do
-                -- Instead of full mock generation, just return "OK" for now
-                status status200
-                text "OK"
+                -- Generate mock response based on the operation's 200 response schema
+                let responses = _operationResponses operation
+                let response200 = InsOrdHashMap.lookup 200 (_responsesResponses responses)
+                case response200 of
+                  Just (Inline response) -> do
+                    let content = _responseContent response
+                    let maybeJsonContent = InsOrdHashMap.lookup "application/json" content
+                    case maybeJsonContent of
+                      Just mediaType -> do
+                        case _mediaTypeObjectSchema mediaType of
+                          Just (Inline schema) -> do
+                            -- Generate mock data from schema
+                            mockData <- liftIO $ generate (generateMockValue schema)
+                            status status200
+                            raw $ encode mockData
+                          _ -> do
+                            -- No inline schema, return empty object
+                            status status200
+                            raw $ encode (object [])
+                      _ -> do
+                        -- No application/json content
+                        status status200
+                        text "OK"
+                  _ -> do
+                    -- No 200 response defined
+                    status status200
+                    text "OK"
               _ -> do
                 status status404
                 text "Method Not Allowed"

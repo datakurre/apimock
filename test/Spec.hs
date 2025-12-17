@@ -3,9 +3,10 @@
 module Main where
 
 import Test.Hspec
-import Test.Hspec.Wai (with, get, shouldRespondWith)
+import Test.Hspec.Wai (with, get, shouldRespondWith, liftIO)
 import Test.Hspec.Wai as Wai -- For withWaiApp, get, shouldRespondWith
 import Test.Hspec.Wai.JSON
+import Network.Wai.Test (simpleBody)
 import Data.OpenApi (OpenApi(..), PathItem(..), Operation(..), Responses(..), Referenced(Inline), MediaTypeObject(..), Schema(..))
 import qualified Data.OpenApi as OpenApi -- For Response, _responseDescription, etc.
 import qualified Data.HashMap.Strict.InsOrd as InsOrdHashMap
@@ -15,7 +16,7 @@ import qualified Data.Text as T -- For T.pack
 import Lib (matchPath, parseOpenApiSpec)
 import Server (apiMockApp)
 import Web.Scotty (scottyApp)
-import Data.Aeson (decode)
+import Data.Aeson (decode, Value(..))
 import Data.Maybe (isJust)
 import qualified Data.ByteString.Lazy as BL
 import qualified Data.Aeson.KeyMap as KeyMap
@@ -158,5 +159,14 @@ main = hspec $ do
     describe "API Mock Server" $ do
       it "responds with 200 to /products" $ do
         Wai.get "/products" `Wai.shouldRespondWith` 200
+      it "returns valid JSON array for /products" $ do
+        response <- Wai.get "/products"
+        liftIO $ do
+          let body = simpleBody response
+          let maybeJson = decode body :: Maybe Value
+          maybeJson `shouldSatisfy` isJust
+          case maybeJson of
+            Just (Array _) -> return ()
+            _ -> expectationFailure "Expected JSON array"
       it "responds with 404 to non-existent path" $ do
         Wai.get "/nonexistent" `Wai.shouldRespondWith` 404
