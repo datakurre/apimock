@@ -91,10 +91,6 @@ dummyGetOperation = Operation
 
 main :: IO ()
 main = hspec $ do
-  describe "Environment" $ do
-    it "can run tests" $ do
-      True `shouldBe` True
-
   describe "Path Matching" $ do
     let openApiSpec = mempty
           { _openApiPaths = InsOrdHashMap.fromList
@@ -142,42 +138,60 @@ main = hspec $ do
                                             })
               ]
           }
-    it "matches a static path" $ do
-      matchPath openApiSpec "/products" `shouldBe` Just ("/products", Map.empty)
-    it "matches a path with a single parameter and extracts it" $ do
-      matchPath openApiSpec "/users/123" `shouldBe` Just ("/users/{userId}", Map.fromList [("userId", "123")])
-    it "matches a path with multiple parameters and extracts them" $ do
-      matchPath openApiSpec "/items/abc/details" `shouldBe` Just ("/items/{itemId}/details", Map.fromList [("itemId", "abc")])
-    it "does not match a non-existent path" $ do
-      matchPath openApiSpec "/orders" `shouldBe` Nothing
-    it "does not match a partially matched path" $ do
-      matchPath openApiSpec "/users/123/extra" `shouldBe` Nothing
+    
+    context "when matching static paths" $ do
+      it "should match /products exactly" $ do
+        matchPath openApiSpec "/products" `shouldBe` Just ("/products", Map.empty)
+    
+    context "when matching parameterized paths" $ do
+      it "should extract a single path parameter" $ do
+        matchPath openApiSpec "/users/123" 
+          `shouldBe` Just ("/users/{userId}", Map.fromList [("userId", "123")])
+      
+      it "should extract multiple path parameters" $ do
+        matchPath openApiSpec "/items/abc/details" 
+          `shouldBe` Just ("/items/{itemId}/details", Map.fromList [("itemId", "abc")])
+    
+    context "when path does not match" $ do
+      it "should return Nothing for non-existent paths" $ do
+        matchPath openApiSpec "/orders" `shouldBe` Nothing
+      
+      it "should return Nothing when path has extra segments" $ do
+        matchPath openApiSpec "/users/123/extra" `shouldBe` Nothing
 
   -- Server tests
   openApi <- runIO $ parseOpenApiSpec "test/data/openapi.json"
   Wai.with (scottyApp $ apiMockApp openApi) $ do
     describe "API Mock Server" $ do
-      it "responds with 200 to /products" $ do
-        Wai.get "/products" `Wai.shouldRespondWith` 200
-      it "returns valid JSON array for /products" $ do
-        response <- Wai.get "/products"
-        liftIO $ do
-          let body = simpleBody response
-          let maybeJson = decode body :: Maybe Value
-          maybeJson `shouldSatisfy` isJust
-          case maybeJson of
-            Just (Array _) -> return ()
-            _ -> expectationFailure "Expected JSON array"
-      it "responds with 404 to non-existent path" $ do
-        Wai.get "/nonexistent" `Wai.shouldRespondWith` 404
-      it "responds with 201 to POST /products" $ do
-        Wai.post "/products" "" `Wai.shouldRespondWith` 201
-      it "returns valid JSON object for POST /products" $ do
-        response <- Wai.post "/products" ""
-        liftIO $ do
-          let body = simpleBody response
-          let maybeJson = decode body :: Maybe Value
-          maybeJson `shouldSatisfy` isJust
-          case maybeJson of
-            Just (Object _) -> return ()
-            _ -> expectationFailure "Expected JSON object"
+      
+      context "GET requests" $ do
+        it "should respond with 200 for /products" $ do
+          Wai.get "/products" `Wai.shouldRespondWith` 200
+        
+        it "should return a valid JSON array for /products" $ do
+          response <- Wai.get "/products"
+          liftIO $ do
+            let body = simpleBody response
+            let maybeJson = decode body :: Maybe Value
+            maybeJson `shouldSatisfy` isJust
+            case maybeJson of
+              Just (Array _) -> return ()
+              _ -> expectationFailure "Expected JSON array"
+      
+      context "POST requests" $ do
+        it "should respond with 201 for /products" $ do
+          Wai.post "/products" "" `Wai.shouldRespondWith` 201
+        
+        it "should return a valid JSON object for /products" $ do
+          response <- Wai.post "/products" ""
+          liftIO $ do
+            let body = simpleBody response
+            let maybeJson = decode body :: Maybe Value
+            maybeJson `shouldSatisfy` isJust
+            case maybeJson of
+              Just (Object _) -> return ()
+              _ -> expectationFailure "Expected JSON object"
+      
+      context "error handling" $ do
+        it "should respond with 404 for non-existent paths" $ do
+          Wai.get "/nonexistent" `Wai.shouldRespondWith` 404
