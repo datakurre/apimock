@@ -6,7 +6,7 @@ import Data.Aeson (encode)
 import Data.OpenApi (OpenApi(..), PathItem(..), Operation(..), Responses(..), Response(..), MediaTypeObject(..), Referenced(Inline), Schema(..), OpenApiType(OpenApiString))
 import qualified Data.HashMap.Strict.InsOrd as InsOrdHashMap
 import Data.Monoid (mempty)
-import Web.Scotty (scotty, scottyApp, get, text, status, raw, param, regex, notFound)
+import Web.Scotty (scotty, scottyApp, get, text, status, raw, param, regex, notFound, ScottyM)
 import Network.HTTP.Types.Status (status200, status404)
 import Control.Monad.IO.Class (liftIO) -- For liftIO
 import qualified Data.Text as T
