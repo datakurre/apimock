@@ -1,17 +1,25 @@
 {-# LANGUAGE OverloadedStrings #-}
+-- | Web server implementation for the API mock service.
+--
+-- This module provides a Scotty-based HTTP server that serves mock responses
+-- based on an OpenAPI specification. It handles routing, method dispatch,
+-- and response generation.
 module Server where
 
 import Lib (parseOpenApiSpec, generateMockValue, generate, matchPath)
 import Data.Aeson (encode, object)
 import Data.OpenApi (OpenApi(..), PathItem(..), Operation(..), Responses(..), Response(..), MediaTypeObject(..), Referenced(Inline), Schema(..), OpenApiType(OpenApiString))
 import qualified Data.HashMap.Strict.InsOrd as InsOrdHashMap
-import Data.Monoid (mempty)
-import Web.Scotty (scotty, scottyApp, get, post, put, delete, patch, text, status, raw, param, regex, notFound, ScottyM, ActionM)
-import Network.HTTP.Types.Status (status200, status201, status404)
+import Web.Scotty (scotty, get, post, put, delete, patch, text, status, raw, param, regex, notFound, ScottyM, ActionM)
+import Network.HTTP.Types.Status (status404, status405)
 import Control.Monad.IO.Class (liftIO)
 import qualified Data.Text as T
 
--- Helper function to generate mock response for a given operation and status code
+-- | Generate and send a mock response for a given operation.
+--
+-- Extracts the response schema from the operation definition for the
+-- specified status code and generates mock data conforming to that schema.
+-- Falls back to empty responses if no schema is defined.
 generateMockResponse :: Operation -> Int -> ActionM ()
 generateMockResponse operation statusCode = do
   let responses = _operationResponses operation
@@ -41,27 +49,37 @@ generateMockResponse operation statusCode = do
       status $ toEnum statusCode
       text "OK"
 
--- Helper function to handle a route with a specific method
+-- | Handle an HTTP request for a specific method.
+--
+-- Matches the request path to the OpenAPI spec, extracts the appropriate
+-- operation for the HTTP method, and generates a mock response.
+-- Returns 404 if the path is not found, or 405 if the method is not allowed.
 handleMethod :: OpenApi -> T.Text -> (PathItem -> Maybe Operation) -> Int -> ActionM ()
 handleMethod openApi fullPath getOperation defaultStatus = do
   let maybeMatch = matchPath openApi fullPath
   case maybeMatch of
-    Just (matchedPathTemplate, pathParams) -> do
+    Just (matchedPathTemplate, _pathParams) -> do
       let maybePathItem = InsOrdHashMap.lookup (T.unpack matchedPathTemplate) (_openApiPaths openApi)
       case maybePathItem of
         Just pathItem -> do
           case getOperation pathItem of
             Just operation -> generateMockResponse operation defaultStatus
-            _ -> do
-              status status404
+            Nothing -> do
+              -- Method not allowed for this path
+              status status405
               text "Method Not Allowed"
-        _ -> do
+        Nothing -> do
+          -- Should not happen since matchPath succeeded
           status status404
-          text "Path not found in OpenAPI spec"
+          text "Path not found"
     Nothing -> do
       status status404
-      text "No matching OpenAPI path found"
+      text "Not Found"
 
+-- | Configure the Scotty application with mock API routes.
+--
+-- Sets up catch-all route handlers for all standard HTTP methods (GET, POST,
+-- PUT, DELETE, PATCH) that dispatch to the appropriate OpenAPI operations.
 apiMockApp :: OpenApi -> ScottyM ()
 apiMockApp openApi = do
   -- Define route handlers for different HTTP methods
@@ -88,7 +106,7 @@ apiMockApp openApi = do
   -- Default 404 for unmatched routes
   notFound $ do
     status status404
-    text "Not Found: Unmatched route"
+    text "Not Found"
 
 -- Dummy Response for 200 status
 dummy200Response :: Referenced Response
@@ -177,6 +195,10 @@ dummyOpenApi = mempty
       ]
   }
 
+-- | Run the API mock server on port 3000.
+--
+-- Loads the OpenAPI specification from @openapi.json@ in the current directory
+-- and starts the Scotty web server.
 run :: IO ()
 run = do
   putStrLn "Loading OpenAPI specification from openapi.json..."
