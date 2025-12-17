@@ -8,16 +8,11 @@ import qualified Data.HashMap.Strict.InsOrd as InsOrdHashMap
 import Data.Monoid (mempty)
 import Web.Scotty (scotty, scottyApp, get, text, status, raw, param, regex, notFound, ScottyM)
 import Network.HTTP.Types.Status (status200, status404)
-import Control.Monad.IO.Class (liftIO) -- For liftIO
+import Control.Monad.IO.Class (liftIO)
 import qualified Data.Text as T
 
 apiMockApp :: OpenApi -> ScottyM ()
 apiMockApp openApi = do
-  -- Default 404 for unmatched routes
-  notFound $ do
-    status status404
-    text "Not Found: Unmatched route"
-
   -- Define a generic route handler for GET requests
   get (regex "(.*)") $ do
     fullPath <- param "0" -- Get the full path from the regex match
@@ -42,6 +37,10 @@ apiMockApp openApi = do
         status status404
         text "No matching OpenAPI path found"
 
+  -- Default 404 for unmatched routes
+  notFound $ do
+    status status404
+    text "Not Found: Unmatched route"
 
 -- Dummy Response for 200 status
 dummy200Response :: Referenced Response
@@ -132,5 +131,8 @@ dummyOpenApi = mempty
 
 run :: IO ()
 run = do
-  putStrLn "Starting API Mock Server on port 3000 with dummy OpenAPI spec..."
-  scotty 3000 (apiMockApp dummyOpenApi)
+  putStrLn "Loading OpenAPI specification from openapi.json..."
+  openApi <- parseOpenApiSpec "openapi.json"
+  putStrLn "Starting API Mock Server on port 3000..."
+  scotty 3000 (apiMockApp openApi)
+
