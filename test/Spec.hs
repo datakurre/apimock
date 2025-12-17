@@ -3,8 +3,8 @@
 module Main where
 
 import Test.Hspec
-import Test.Hspec.Wai (with, get, shouldRespondWith, liftIO)
-import Test.Hspec.Wai as Wai -- For withWaiApp, get, shouldRespondWith
+import Test.Hspec.Wai (with, get, post, shouldRespondWith, liftIO)
+import Test.Hspec.Wai as Wai -- For withWaiApp, get, post, shouldRespondWith
 import Test.Hspec.Wai.JSON
 import Network.Wai.Test (simpleBody)
 import Data.OpenApi (OpenApi(..), PathItem(..), Operation(..), Responses(..), Referenced(Inline), MediaTypeObject(..), Schema(..))
@@ -170,3 +170,14 @@ main = hspec $ do
             _ -> expectationFailure "Expected JSON array"
       it "responds with 404 to non-existent path" $ do
         Wai.get "/nonexistent" `Wai.shouldRespondWith` 404
+      it "responds with 201 to POST /products" $ do
+        Wai.post "/products" "" `Wai.shouldRespondWith` 201
+      it "returns valid JSON object for POST /products" $ do
+        response <- Wai.post "/products" ""
+        liftIO $ do
+          let body = simpleBody response
+          let maybeJson = decode body :: Maybe Value
+          maybeJson `shouldSatisfy` isJust
+          case maybeJson of
+            Just (Object _) -> return ()
+            _ -> expectationFailure "Expected JSON object"

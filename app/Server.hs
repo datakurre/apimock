@@ -6,60 +6,84 @@ import Data.Aeson (encode, object)
 import Data.OpenApi (OpenApi(..), PathItem(..), Operation(..), Responses(..), Response(..), MediaTypeObject(..), Referenced(Inline), Schema(..), OpenApiType(OpenApiString))
 import qualified Data.HashMap.Strict.InsOrd as InsOrdHashMap
 import Data.Monoid (mempty)
-import Web.Scotty (scotty, scottyApp, get, text, status, raw, param, regex, notFound, ScottyM)
-import Network.HTTP.Types.Status (status200, status404)
+import Web.Scotty (scotty, scottyApp, get, post, put, delete, patch, text, status, raw, param, regex, notFound, ScottyM, ActionM)
+import Network.HTTP.Types.Status (status200, status201, status404)
 import Control.Monad.IO.Class (liftIO)
 import qualified Data.Text as T
 
+-- Helper function to generate mock response for a given operation and status code
+generateMockResponse :: Operation -> Int -> ActionM ()
+generateMockResponse operation statusCode = do
+  let responses = _operationResponses operation
+  let response = InsOrdHashMap.lookup statusCode (_responsesResponses responses)
+  case response of
+    Just (Inline resp) -> do
+      let content = _responseContent resp
+      let maybeJsonContent = InsOrdHashMap.lookup "application/json" content
+      case maybeJsonContent of
+        Just mediaType -> do
+          case _mediaTypeObjectSchema mediaType of
+            Just (Inline schema) -> do
+              -- Generate mock data from schema
+              mockData <- liftIO $ generate (generateMockValue schema)
+              status $ toEnum statusCode
+              raw $ encode mockData
+            _ -> do
+              -- No inline schema, return empty object
+              status $ toEnum statusCode
+              raw $ encode (object [])
+        _ -> do
+          -- No application/json content
+          status $ toEnum statusCode
+          text "OK"
+    _ -> do
+      -- No matching response defined, default to OK
+      status $ toEnum statusCode
+      text "OK"
+
+-- Helper function to handle a route with a specific method
+handleMethod :: OpenApi -> T.Text -> (PathItem -> Maybe Operation) -> Int -> ActionM ()
+handleMethod openApi fullPath getOperation defaultStatus = do
+  let maybeMatch = matchPath openApi fullPath
+  case maybeMatch of
+    Just (matchedPathTemplate, pathParams) -> do
+      let maybePathItem = InsOrdHashMap.lookup (T.unpack matchedPathTemplate) (_openApiPaths openApi)
+      case maybePathItem of
+        Just pathItem -> do
+          case getOperation pathItem of
+            Just operation -> generateMockResponse operation defaultStatus
+            _ -> do
+              status status404
+              text "Method Not Allowed"
+        _ -> do
+          status status404
+          text "Path not found in OpenAPI spec"
+    Nothing -> do
+      status status404
+      text "No matching OpenAPI path found"
+
 apiMockApp :: OpenApi -> ScottyM ()
 apiMockApp openApi = do
-  -- Define a generic route handler for GET requests
+  -- Define route handlers for different HTTP methods
   get (regex "(.*)") $ do
-    fullPath <- param "0" -- Get the full path from the regex match
-    let maybeMatch = matchPath openApi fullPath
-    case maybeMatch of
-      Just (matchedPathTemplate, pathParams) -> do
-        let maybePathItem = InsOrdHashMap.lookup (T.unpack matchedPathTemplate) (_openApiPaths openApi)
-        case maybePathItem of
-          Just pathItem -> do
-            case _pathItemGet pathItem of
-              Just operation -> do
-                -- Generate mock response based on the operation's 200 response schema
-                let responses = _operationResponses operation
-                let response200 = InsOrdHashMap.lookup 200 (_responsesResponses responses)
-                case response200 of
-                  Just (Inline response) -> do
-                    let content = _responseContent response
-                    let maybeJsonContent = InsOrdHashMap.lookup "application/json" content
-                    case maybeJsonContent of
-                      Just mediaType -> do
-                        case _mediaTypeObjectSchema mediaType of
-                          Just (Inline schema) -> do
-                            -- Generate mock data from schema
-                            mockData <- liftIO $ generate (generateMockValue schema)
-                            status status200
-                            raw $ encode mockData
-                          _ -> do
-                            -- No inline schema, return empty object
-                            status status200
-                            raw $ encode (object [])
-                      _ -> do
-                        -- No application/json content
-                        status status200
-                        text "OK"
-                  _ -> do
-                    -- No 200 response defined
-                    status status200
-                    text "OK"
-              _ -> do
-                status status404
-                text "Method Not Allowed"
-          _ -> do
-            status status404
-            text "Path not found in OpenAPI spec"
-      Nothing -> do
-        status status404
-        text "No matching OpenAPI path found"
+    fullPath <- param "0"
+    handleMethod openApi fullPath _pathItemGet 200
+
+  post (regex "(.*)") $ do
+    fullPath <- param "0"
+    handleMethod openApi fullPath _pathItemPost 201
+
+  put (regex "(.*)") $ do
+    fullPath <- param "0"
+    handleMethod openApi fullPath _pathItemPut 200
+
+  delete (regex "(.*)") $ do
+    fullPath <- param "0"
+    handleMethod openApi fullPath _pathItemDelete 204
+
+  patch (regex "(.*)") $ do
+    fullPath <- param "0"
+    handleMethod openApi fullPath _pathItemPatch 200
 
   -- Default 404 for unmatched routes
   notFound $ do
