@@ -1,10 +1,4 @@
-.PHONY: shell build watch serve test
-
-shell:
-	nix develop
-	$(eval TIX_FILE := $(shell find dist-newstyle -name "*.tix" | head -n 1))
-	nix develop --command hpc report $(TIX_FILE) --hpcdir=dist-newstyle --srcdir=src --srcdir=app --srcdir=test
-	nix develop --command hpc markup $(TIX_FILE) --hpcdir=dist-newstyle --srcdir=src --srcdir=app --srcdir=test --destdir=hpc_html_report
+.PHONY: shell build watch serve test coverage
 
 shell:
 	nix develop
@@ -20,3 +14,21 @@ serve: build
 
 test:
 	nix develop --command cabal test
+
+coverage:
+	nix develop --command cabal test --enable-coverage
+	@echo ""
+	@echo "Coverage report generated. Finding .tix file..."
+	@TIX_FILE=$$(find dist-newstyle -name "apimock-test.tix" | head -n 1); \
+	if [ -n "$$TIX_FILE" ]; then \
+		echo "Found: $$TIX_FILE"; \
+		echo "Generating text report..."; \
+		hpc report "$$TIX_FILE" --hpcdir=dist-newstyle/build/x86_64-linux/ghc-9.10.3/apimock-0.1.0.0/t/apimock-test/hpc; \
+		echo ""; \
+		echo "Generating HTML report in coverage_html/..."; \
+		hpc markup "$$TIX_FILE" --hpcdir=dist-newstyle/build/x86_64-linux/ghc-9.10.3/apimock-0.1.0.0/t/apimock-test/hpc --destdir=coverage_html; \
+		echo "Open coverage_html/hpc_index.html to view the report."; \
+	else \
+		echo "Error: Could not find .tix file"; \
+		exit 1; \
+	fi

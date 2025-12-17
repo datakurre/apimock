@@ -23,6 +23,8 @@ TAGS
 hie.yaml
 hie.yaml.bak
 .ghc.environment.*
+coverage_html/
+hpc_html_report/
 
 # IDE specific
 .vscode/
